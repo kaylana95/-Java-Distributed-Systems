@@ -1,0 +1,181 @@
+Creating a Student Class
+Create a Student class with setter and getter methods as shown below.
+
+public class Student implements java.io.Serializable {   
+   private int id, percent;   
+   private String name, branch, email;    
+  
+   public int getId() { 
+      return id; 
+   } 
+   public String getName() { 
+      return name; 
+   } 
+   public String getBranch() { 
+      return branch; 
+   } 
+   public int getPercent() { 
+      return percent; 
+   } 
+   public String getEmail() { 
+      return email; 
+   } 
+   public void setID(int id) { 
+      this.id = id; 
+   } 
+   public void setName(String name) { 
+      this.name = name; 
+   } 
+   public void setBranch(String branch) { 
+      this.branch = branch; 
+   } 
+   public void setPercent(int percent) { 
+      this.percent = percent; 
+   } 
+   public void setEmail(String email) { 
+      this.email = email; 
+   } 
+}
+Defining the Remote Interface
+Define the remote interface. Here, we are defining a remote interface named Hello with a method named getStudents () in it. This method returns a list which contains the object of the class Student.
+
+import java.rmi.Remote; 
+import java.rmi.RemoteException; 
+import java.util.*;
+
+// Creating Remote interface for our application 
+public interface Hello extends Remote {  
+   public List<Student> getStudents() throws Exception;  
+}
+Developing the Implementation Class
+Create a class and implement the above created interface.
+
+Here we are implementing the getStudents() method of the Remote interface. When you invoke this method, it retrieves the records of a table named student_data. Sets these values to the Student class using its setter methods, adds it to a list object and returns that list.
+
+import java.sql.*; 
+import java.util.*;  
+
+// Implementing the remote interface 
+public class ImplExample implements Hello {  
+   
+   // Implementing the interface method 
+   public List<Student> getStudents() throws Exception {  
+      List<Student> list = new ArrayList<Student>();   
+    
+      // JDBC driver name and database URL 
+      String JDBC_DRIVER = "com.mysql.jdbc.Driver";   
+      String DB_URL = "jdbc:mysql://localhost:3306/details";  
+      
+      // Database credentials 
+      String USER = "myuser"; 
+      String PASS = "password";  
+      
+      Connection conn = null; 
+      Statement stmt = null;  
+      
+      //Register JDBC driver 
+      Class.forName("com.mysql.jdbc.Driver");   
+      
+      //Open a connection
+      System.out.println("Connecting to a selected database..."); 
+      conn = DriverManager.getConnection(DB_URL, USER, PASS); 
+      System.out.println("Connected database successfully...");  
+      
+      //Execute a query 
+      System.out.println("Creating statement..."); 
+      
+      stmt = conn.createStatement();  
+      String sql = "SELECT * FROM student_data"; 
+      ResultSet rs = stmt.executeQuery(sql);  
+      
+      //Extract data from result set 
+      while(rs.next()) { 
+         // Retrieve by column name 
+         int id  = rs.getInt("id"); 
+         
+         String name = rs.getString("name"); 
+         String branch = rs.getString("branch"); 
+         
+         int percent = rs.getInt("percentage"); 
+         String email = rs.getString("email");  
+         
+         // Setting the values 
+         Student student = new Student(); 
+         student.setID(id); 
+         student.setName(name); 
+         student.setBranch(branch); 
+         student.setPercent(percent); 
+         student.setEmail(email); 
+         list.add(student); 
+      } 
+      rs.close(); 
+      return list;     
+   }  
+}
+Server Program
+An RMI server program should implement the remote interface or extend the implementation class. Here, we should create a remote object and bind it to the RMI registry.
+
+Following is the server program of this application. Here, we will extend the above created class, create a remote object and register it to the RMI registry with the bind name hello.
+
+import java.rmi.registry.Registry; 
+import java.rmi.registry.LocateRegistry; 
+import java.rmi.RemoteException; 
+import java.rmi.server.UnicastRemoteObject; 
+
+public class Server extends ImplExample { 
+   public Server() {} 
+   public static void main(String args[]) { 
+      try { 
+         // Instantiating the implementation class 
+         ImplExample obj = new ImplExample(); 
+    
+         // Exporting the object of implementation class (
+            here we are exporting the remote object to the stub) 
+         Hello stub = (Hello) UnicastRemoteObject.exportObject(obj, 0);  
+         
+         // Binding the remote object (stub) in the registry 
+         Registry registry = LocateRegistry.getRegistry(); 
+         
+         registry.bind("Hello", stub);  
+         System.err.println("Server ready"); 
+      } catch (Exception e) { 
+         System.err.println("Server exception: " + e.toString()); 
+         e.printStackTrace(); 
+      } 
+   } 
+}
+Client Program
+Following is the client program of this application. Here, we are fetching the remote object and invoking the method named getStudents(). It retrieves the records of the table from the list object and displays them.
+
+import java.rmi.registry.LocateRegistry; 
+import java.rmi.registry.Registry; 
+import java.util.*;  
+
+public class Client {  
+   private Client() {}  
+   public static void main(String[] args)throws Exception {  
+      try { 
+         // Getting the registry 
+         Registry registry = LocateRegistry.getRegistry(null); 
+    
+         // Looking up the registry for the remote object 
+         Hello stub = (Hello) registry.lookup("Hello"); 
+    
+         // Calling the remote method using the obtained object 
+         List<Student> list = (List)stub.getStudents(); 
+         for (Student s:list)v { 
+            
+            // System.out.println("bc "+s.getBranch()); 
+            System.out.println("ID: " + s.getId()); 
+            System.out.println("name: " + s.getName()); 
+            System.out.println("branch: " + s.getBranch()); 
+            System.out.println("percent: " + s.getPercent()); 
+            System.out.println("email: " + s.getEmail()); 
+         }  
+      // System.out.println(list); 
+      } catch (Exception e) { 
+         System.err.println("Client exception: " + e.toString()); 
+         e.printStackTrace(); 
+      } 
+   } 
+}
